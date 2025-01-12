@@ -87,9 +87,19 @@ class AuchanScraper:
 
             product_url = name_elem.get('href', '')
 
+            # Extract the default_code (just the numeric part before first hyphen)
+            default_code = ''
+            if product_url:
+                try:
+                    filename = product_url.split('/')[-1]
+                    default_code = filename.split('-')[0]  # Get the part before first hyphen
+                    logging.info(f"Extracted default_code: {default_code} from URL: {product_url}")
+                except Exception as e:
+                    logging.error(f"Error extracting default_code from URL {product_url}: {str(e)}")
+
             product_data = {
                 'name': name_elem.text.strip(),
-                'default_code': product_url.split('/')[-1] if product_url else '',
+                'default_code': default_code,
                 'list_price': price,  # Now guaranteed to be float
                 'type': 'Biens',  # Default value as requested
                 'categ_id': 'All',  # Default value as requested
