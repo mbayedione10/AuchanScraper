@@ -24,10 +24,14 @@ class AuchanScraper:
     def search_products(self, query: str) -> List[Dict]:
         """Search products by query string"""
         try:
-            search_url = f"{self.BASE_URL}/recherche?controller=search&s={query}"
-            logging.info(f"Searching URL: {search_url}")
+            search_url = f"{self.BASE_URL}/recherche"
+            params = {
+                'controller': 'search',
+                's': query
+            }
+            logging.info(f"Searching URL: {search_url} with params: {params}")
 
-            response = self.session.get(search_url)
+            response = self.session.get(search_url, params=params)
             response.raise_for_status()
 
             logging.info(f"Response status: {response.status_code}")
@@ -70,24 +74,31 @@ class AuchanScraper:
                     })
                 return None
 
-            price = price_elem.text.strip()
-            # Remove currency and spaces, convert to float
-            price = float(''.join(c for c in price if c.isdigit() or c == '.'))
+            # Extract and clean price
+            price_text = price_elem.text.strip()
+            # Remove non-numeric characters except decimal point
+            price = ''.join(c for c in price_text if c.isdigit() or c == '.')
+            try:
+                price = float(price)
+                logging.info(f"Converted price '{price_text}' to {price}")
+            except ValueError:
+                logging.error(f"Failed to convert price: {price_text}")
+                return None
 
             product_url = name_elem.get('href', '')
 
             product_data = {
                 'name': name_elem.text.strip(),
                 'default_code': product_url.split('/')[-1] if product_url else '',
-                'list_price': price,
-                'type': 'product',
-                'categ_id': self._get_category(product_element),
+                'list_price': price,  # Now guaranteed to be float
+                'type': 'Biens',  # Default value as requested
+                'categ_id': 'All',  # Default value as requested
                 'description_sale': self._get_description(product_element),
                 'active': True,
                 'sale_ok': True,
                 'purchase_ok': True,
                 'image_1920': img_elem.get('src', '') if img_elem else '',
-                'is_published': True,
+                'is_published': True,  # Default value as requested
                 'public_categ_ids': self._get_category_hierarchy(product_element)
             }
 
@@ -97,15 +108,6 @@ class AuchanScraper:
         except Exception as e:
             logging.error(f"Error extracting product data: {str(e)}")
             return None
-
-    def _get_category(self, product_element) -> str:
-        """Extract category information"""
-        try:
-            category_elem = product_element.select_one('.product-category-name')
-            return category_elem.text.strip() if category_elem else "Uncategorized"
-        except Exception as e:
-            logging.error(f"Error getting category: {str(e)}")
-            return "Uncategorized"
 
     def _get_description(self, product_element) -> str:
         """Extract product description"""
