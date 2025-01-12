@@ -9,7 +9,7 @@ class OdooDataProcessor:
     ODOO_COLUMNS = [
         'name', 'default_code', 'list_price', 'type', 'categ_id',
         'description_sale', 'active', 'sale_ok', 'purchase_ok',
-        'image_1920', 'is_published', 'public_categ_ids', 'create_date'
+        'image_1920', 'is_published', 'public_categ_ids'
     ]
 
     COLUMN_WIDTHS = {
@@ -24,18 +24,13 @@ class OdooDataProcessor:
         'purchase_ok': 10,
         'image_1920': 50,
         'is_published': 12,
-        'public_categ_ids': 30,
-        'create_date': 20
+        'public_categ_ids': 30
     }
 
     def format_data(self, products: List[Dict]) -> pd.DataFrame:
         """Format scraped data into Odoo-compatible DataFrame"""
         # Create DataFrame from products
         df = pd.DataFrame(products)
-
-        # Add create_date field
-        current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        df['create_date'] = current_date
 
         # Ensure all required columns exist
         for col in self.ODOO_COLUMNS:
