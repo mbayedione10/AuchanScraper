@@ -2,6 +2,8 @@ import pandas as pd
 from typing import List, Dict
 import io
 from datetime import datetime
+from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+from openpyxl.styles.numbers import FORMAT_NUMBER_COMMA_SEPARATED1
 
 class OdooDataProcessor:
     ODOO_COLUMNS = [
@@ -9,6 +11,22 @@ class OdooDataProcessor:
         'description_sale', 'active', 'sale_ok', 'purchase_ok',
         'image_1920', 'is_published', 'public_categ_ids', 'create_date'
     ]
+
+    COLUMN_WIDTHS = {
+        'name': 40,
+        'default_code': 15,
+        'list_price': 15,
+        'type': 10,
+        'categ_id': 15,
+        'description_sale': 50,
+        'active': 8,
+        'sale_ok': 8,
+        'purchase_ok': 10,
+        'image_1920': 50,
+        'is_published': 12,
+        'public_categ_ids': 30,
+        'create_date': 20
+    }
 
     def format_data(self, products: List[Dict]) -> pd.DataFrame:
         """Format scraped data into Odoo-compatible DataFrame"""
@@ -53,21 +71,47 @@ class OdooDataProcessor:
             workbook = writer.book
             worksheet = writer.sheets['Products']
 
-            # Auto-adjust columns width
-            for column in worksheet.columns:
-                max_length = 0
-                column = [cell for cell in column]
-                for cell in column:
-                    try:
-                        if len(str(cell.value)) > max_length:
-                            max_length = len(str(cell.value))
-                    except:
-                        pass
-                adjusted_width = (max_length + 2)
-                worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
+            # Define styles
+            header_fill = PatternFill(start_color="E40019", end_color="E40019", fill_type="solid")
+            header_font = Font(name='Arial', size=11, bold=True, color="FFFFFF")
+            header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+
+            # Border style
+            thin_border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
 
             # Format headers
-            for cell in worksheet[1]:
-                cell.style = 'Headline 3'
+            for col_num, column in enumerate(df.columns, 1):
+                cell = worksheet.cell(row=1, column=col_num)
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = header_alignment
+                cell.border = thin_border
+
+                # Set column width
+                column_letter = cell.column_letter
+                worksheet.column_dimensions[column_letter].width = self.COLUMN_WIDTHS.get(column, 15)
+
+            # Format data cells
+            for row in range(2, len(df) + 2):
+                for col_num, column in enumerate(df.columns, 1):
+                    cell = worksheet.cell(row=row, column=col_num)
+                    cell.border = thin_border
+                    cell.alignment = Alignment(vertical='center', wrap_text=True)
+
+                    # Special formatting for price column
+                    if column == 'list_price':
+                        cell.number_format = '#,##0.00 "CFA"'
+
+                    # Center align boolean columns
+                    elif column in ['active', 'sale_ok', 'purchase_ok', 'is_published']:
+                        cell.alignment = Alignment(horizontal='center', vertical='center')
+
+            # Freeze the header row
+            worksheet.freeze_panes = 'A2'
 
         return output.getvalue()
