@@ -27,17 +27,11 @@ def main():
     with st.sidebar:
         st.subheader("Options de recherche")
         search_query = st.text_input("Rechercher un produit", "")
+        max_results = st.number_input("Nombre maximum de résultats", min_value=1, max_value=100, value=20)
 
-        st.subheader("Filtres")
+        st.subheader("Filtres de prix")
         min_price = st.number_input("Prix minimum (CFA)", 0, 1000000, 0)
         max_price = st.number_input("Prix maximum (CFA)", 0, 1000000, 1000000)
-
-        st.subheader("Champs à exporter")
-        export_fields = st.multiselect(
-            "Sélectionner les champs",
-            ['name', 'default_code', 'list_price', 'description_sale', 'image_1920'],
-            ['name', 'default_code', 'list_price']
-        )
 
     # Main content area with tabs
     tab1, tab2 = st.tabs(["Recherche", "Résultats"])
@@ -53,18 +47,15 @@ def main():
                     products = scraper.search_products(search_query)
 
                     if products:
-                        # Filter products by price
+                        # Filter products by price and limit results
                         filtered_products = [
                             p for p in products 
                             if min_price <= p['list_price'] <= max_price
-                        ]
+                        ][:max_results]
 
                         # Data processing phase
                         update_progress(progress_bar, 0.6)
-                        df = processor.format_data(filtered_products)
-
-                        # Keep only selected fields
-                        st.session_state.products_df = df[export_fields]
+                        st.session_state.products_df = processor.format_data(filtered_products)
 
                         # Switch to results tab
                         st.session_state.active_tab = "Résultats"
